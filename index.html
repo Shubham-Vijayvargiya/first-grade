@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Champion Academy — 1st Grade Learning Adventure</title>
+  <meta name="description" content="An interactive, gamified educational website for 1st grade students. Learn reading, math, science, social studies, and art through fun arcade-style games and activities.">
+  <meta name="keywords" content="1st grade, education, learning, interactive, kids, reading, math, science">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="css/home.css">
+  <link rel="stylesheet" href="css/module.css">
+  <link rel="stylesheet" href="css/lesson.css">
+  <link rel="stylesheet" href="css/activities.css">
+  <link rel="stylesheet" href="css/quiz.css">
+  <link rel="stylesheet" href="css/progress.css">
+</head>
+<body>
+
+  <!-- ========== WELCOME MODAL (First Visit) ========== -->
+  <div id="welcome-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Welcome">
+    <div class="modal-content welcome-modal">
+      <div class="welcome-trophy-row">
+        <span class="welcome-trophy bounce-in">🏅</span>
+        <span class="welcome-trophy bounce-in delay-1">🏆</span>
+        <span class="welcome-trophy bounce-in delay-2">🏅</span>
+      </div>
+      <h1 class="welcome-title">Welcome to<br><span class="glow-text">Champion Academy!</span></h1>
+      <p class="welcome-subtitle">Get ready to level up your learning!</p>
+      <div class="welcome-input-group">
+        <label for="student-name-input" class="welcome-label">What's your name, champion?</label>
+        <input
+          type="text"
+          id="student-name-input"
+          class="welcome-input"
+          placeholder="Type your name here..."
+          maxlength="20"
+          autocomplete="off"
+          autofocus
+        >
+      </div>
+      <button id="start-btn" class="btn btn-primary btn-xl pulse-glow" disabled>
+        🚀 Let's Go!
+      </button>
+      <p class="welcome-hint">Press Enter or click the button to start!</p>
+    </div>
+  </div>
+
+  <!-- ========== APP HEADER / SCOREBOARD ========== -->
+  <header id="app-header" class="app-header">
+    <div class="header-left">
+      <a href="#home" id="logo-link" class="logo" aria-label="Go to home page">
+        <span class="logo-icon">🏆</span>
+        <span class="logo-text">Champion Academy</span>
+      </a>
+    </div>
+
+    <nav class="header-center" id="breadcrumb-nav" aria-label="Breadcrumb navigation">
+      <ol class="breadcrumbs" id="breadcrumbs"></ol>
+    </nav>
+
+    <div class="header-right">
+      <div class="scoreboard">
+        <div class="stat-pill stat-points" id="stat-points" title="Total Points">
+          <span class="stat-icon">⭐</span>
+          <span class="stat-value" id="points-value">0</span>
+        </div>
+        <div class="stat-pill stat-trophies" id="stat-trophies" title="Trophies Earned">
+          <span class="stat-icon">🏆</span>
+          <span class="stat-value" id="trophies-value">0</span>
+        </div>
+        <div class="stat-pill stat-streak" id="stat-streak" title="Day Streak">
+          <span class="stat-icon">🔥</span>
+          <span class="stat-value" id="streak-value">0</span>
+        </div>
+      </div>
+      <button id="sound-toggle" class="btn-icon" title="Toggle Sound" aria-label="Toggle sound effects">
+        🔊
+      </button>
+      <a href="#progress" class="btn btn-accent btn-sm" id="progress-link">📊 My Progress</a>
+    </div>
+  </header>
+
+  <!-- ========== MAIN CONTENT AREA ========== -->
+  <main id="app-content" class="app-content" role="main">
+    <!-- Views are rendered here dynamically by the router -->
+    <div class="loading-screen" id="loading-screen">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">Loading your arena...</p>
+    </div>
+  </main>
+
+  <!-- ========== REWARD / BADGE OVERLAY ========== -->
+  <div id="reward-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-label="Reward">
+    <div class="reward-content" id="reward-content">
+      <!-- Dynamically populated by rewards.js -->
+    </div>
+  </div>
+
+  <!-- ========== CONFETTI CANVAS ========== -->
+  <canvas id="confetti-canvas" aria-hidden="true"></canvas>
+
+  <!-- ========== SCRIPTS (Load Order Matters) ========== -->
+  <!-- Data files first -->
+  <script src="js/data/ela-data.js"></script>
+  <script src="js/data/math-data.js"></script>
+  <script src="js/data/science-data.js"></script>
+  <script src="js/data/social-data.js"></script>
+  <script src="js/data/art-data.js"></script>
+
+  <!-- Utilities -->
+  <script src="js/utils/audio.js"></script>
+  <script src="js/utils/animations.js"></script>
+
+  <!-- Services -->
+  <script src="js/services/storage.js"></script>
+  <script src="js/services/progress.js"></script>
+
+  <!-- Components -->
+  <script src="js/components/progress-bar.js"></script>
+  <script src="js/components/rewards.js"></script>
+  <script src="js/components/activities.js"></script>
+  <script src="js/components/quiz-engine.js"></script>
+  <script src="js/components/lesson-view.js"></script>
+  <script src="js/components/module-card.js"></script>
+  <script src="js/components/navigation.js"></script>
+  <script src="js/components/worksheets.js"></script>
+
+  <!-- Main App (must be last) -->
+  <script src="js/app.js"></script>
+</body>
+</html>

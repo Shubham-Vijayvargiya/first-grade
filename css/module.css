@@ -1,0 +1,252 @@
+/* ============================================================
+   CHAMPION ACADEMY — Module View CSS
+   ============================================================ */
+
+/* ── Subject Header ─────────────────────────────────────────── */
+.subject-view {
+  padding-bottom: var(--space-3xl);
+}
+
+.subject-header {
+  text-align: center;
+  padding: var(--space-xl) 0 var(--space-2xl);
+  position: relative;
+}
+
+.subject-header-icon {
+  font-size: 4rem;
+  display: block;
+  margin-bottom: var(--space-md);
+  animation: float 3s ease-in-out infinite;
+}
+
+.subject-header-title {
+  font-size: var(--font-size-4xl);
+  margin-bottom: var(--space-xs);
+}
+
+.subject-header-desc {
+  font-size: var(--font-size-lg);
+  color: var(--text-secondary);
+  max-width: 600px;
+  margin: 0 auto var(--space-lg);
+}
+
+.subject-stats-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xl);
+  flex-wrap: wrap;
+}
+
+.subject-stat {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.subject-stat-icon {
+  font-size: 1.1rem;
+}
+
+.subject-stat-value {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-lg);
+  color: var(--text-primary);
+}
+
+/* ── Module Grid ────────────────────────────────────────────── */
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-xl);
+}
+
+/* ── Module Card ────────────────────────────────────────────── */
+.module-card {
+  background: var(--bg-card);
+  border: 2px solid #212529;
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all var(--transition-normal);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 4px 4px 0px #212529;
+}
+
+.module-card::before {
+  display: none;
+}
+
+.module-card:hover {
+  transform: translate(-3px, -3px);
+}
+
+.module-card:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 2px 0px #212529 !important;
+}
+
+/* Subject coloring for module cards */
+.module-card[data-subject="ela"] { border-color: var(--color-ela); }
+.module-card[data-subject="ela"]:hover { box-shadow: 7px 7px 0px var(--color-ela); }
+
+.module-card[data-subject="math"] { border-color: var(--color-math); }
+.module-card[data-subject="math"]:hover { box-shadow: 7px 7px 0px var(--color-math); }
+
+.module-card[data-subject="science"] { border-color: var(--color-science-dark); }
+.module-card[data-subject="science"]:hover { box-shadow: 7px 7px 0px var(--color-science-dark); }
+
+.module-card[data-subject="social"] { border-color: var(--color-social-dark); }
+.module-card[data-subject="social"]:hover { box-shadow: 7px 7px 0px var(--color-social-dark); }
+
+.module-card[data-subject="art"] { border-color: var(--color-art-dark); }
+.module-card[data-subject="art"]:hover { box-shadow: 7px 7px 0px var(--color-art-dark); }
+
+/* Module card parts */
+.module-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: var(--space-md);
+}
+
+.module-card-number {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.module-card-badge {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  border-radius: var(--radius-round);
+  background: #FFFFFF;
+  border: 2px solid #212529;
+  transition: all var(--transition-fast);
+}
+
+.module-card-badge.earned {
+  background: rgba(255, 215, 0, 0.15);
+  border-color: #212529;
+}
+
+.module-card-badge.locked {
+  opacity: 0.3;
+  filter: grayscale(1);
+}
+
+.module-card-icon {
+  font-size: 2.5rem;
+  margin-bottom: var(--space-sm);
+  display: block;
+}
+
+.module-card-title {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-xl);
+  letter-spacing: 0.03em;
+  margin-bottom: var(--space-xs);
+}
+
+.module-card-desc {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-lg);
+  line-height: 1.5;
+  flex: 1;
+}
+
+/* Module card footer */
+.module-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+}
+
+.module-card-lessons {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.module-card-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.module-progress-bar {
+  width: 80px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.module-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.8s var(--ease-out);
+  min-width: 0;
+}
+
+.module-card[data-subject="ela"] .module-progress-fill { background: var(--color-ela); }
+.module-card[data-subject="math"] .module-progress-fill { background: var(--color-math); }
+.module-card[data-subject="science"] .module-progress-fill { background: var(--color-science); }
+.module-card[data-subject="social"] .module-progress-fill { background: var(--color-social); }
+.module-card[data-subject="art"] .module-progress-fill { background: var(--color-art); }
+
+.module-progress-pct {
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  color: var(--text-muted);
+  min-width: 32px;
+  text-align: right;
+}
+
+/* ── Module Completed State ── */
+.module-card.completed {
+  border-color: #212529;
+}
+
+.module-card.completed::after {
+  content: '✅';
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  font-size: 1.5rem;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .module-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .subject-header-icon {
+    font-size: 3rem;
+  }
+
+  .subject-header-title {
+    font-size: var(--font-size-3xl);
+  }
+
+  .subject-stats-bar {
+    gap: var(--space-md);
+  }
+}
