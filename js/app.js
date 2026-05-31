@@ -146,8 +146,8 @@
     if (user) {
       var html = '<div class="auth-user-profile">';
       var displayName = Storage.getStudentName() || user.name || 'Champion';
-      var avatar = (typeof Storage !== 'undefined' && typeof Storage.getAvatar === 'function') ? Storage.getAvatar() : '👦';
-      html += '<span class="auth-user-avatar" style="display:flex;align-items:center;justify-content:center;font-size:1.5rem;background:#E9ECEF;border-radius:50%;width:38px;height:38px;border:2px solid var(--color-primary);line-height:1">' + avatar + '</span>';
+      var avatar = (typeof Storage !== 'undefined' && typeof Storage.getAvatar === 'function') ? Storage.getAvatar() : '🧽';
+      html += renderAvatarHTML(avatar, 'auth-user-avatar');
       html += '<div class="auth-user-info" style="display:flex;flex-direction:column;align-items:flex-start">';
       html += '<span class="auth-user-name" title="' + escapeHtml(user.email) + '">' + escapeHtml(displayName) + '</span>';
       html += '<button id="header-switch-profile-btn" class="btn-link btn-xs" style="color:var(--color-secondary-dark);font-size:0.75rem;padding:0;font-weight:700;cursor:pointer;border:none;background:none">🔄 Switch Profile</button>';
