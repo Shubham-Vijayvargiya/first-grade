@@ -121,12 +121,13 @@
 
     if (user) {
       var html = '<div class="auth-user-profile">';
+      var displayName = Storage.getStudentName() || user.name;
       if (user.avatar) {
-        html += '<img src="' + escapeHtml(user.avatar) + '" alt="' + escapeHtml(user.name) + '" class="auth-user-avatar">';
+        html += '<img src="' + escapeHtml(user.avatar) + '" alt="' + escapeHtml(displayName) + '" class="auth-user-avatar">';
       } else {
         html += '<span class="auth-user-avatar" style="display:flex;align-items:center;justify-content:center;font-size:1.2rem;background:#E9ECEF">👤</span>';
       }
-      html += '<span class="auth-user-name" title="' + escapeHtml(user.email) + '">' + escapeHtml(user.name) + '</span>';
+      html += '<span class="auth-user-name" title="' + escapeHtml(user.email) + '">' + escapeHtml(displayName) + '</span>';
       html += '<button id="header-logout-btn" class="btn btn-outline btn-sm">Sign Out</button>';
       html += '</div>';
       container.innerHTML = html;
@@ -242,7 +243,7 @@
     html += '<div class="home-banner">';
     html += '<span class="home-banner-mascot">🏆</span>';
     html += '<p class="home-banner-greeting">Hey there,</p>';
-    html += '<h1 class="home-banner-name glow-text">' + escapeHtml(name) + '!</h1>';
+    html += '<h1 class="home-banner-name glow-text">' + escapeHtml(name) + ' <button id="edit-name-btn" class="edit-name-btn" title="Change Name">✏️</button>!</h1>';
     html += '<p class="home-banner-tagline">Ready to level up your learning? Pick a game zone!</p>';
     html += '</div>';
 
@@ -323,6 +324,31 @@
 
     contentEl.innerHTML = html;
     bindCardClicks();
+
+    // Bind edit name button click
+    var editBtn = document.getElementById('edit-name-btn');
+    if (editBtn) {
+      editBtn.addEventListener('click', function () {
+        var currentName = Storage.getStudentName() || 'Champion';
+        var newName = prompt("What is the student's name?", currentName);
+        if (newName !== null) {
+          var nameToSave = newName.trim();
+          if (nameToSave.length > 0) {
+            Storage.setStudentName(nameToSave);
+            // Refresh stats and UI
+            Progress.updateHeaderStats();
+            
+            // If logged in, reload the header login view to show student name
+            if (window.AuthService && window.AuthService.isAuthenticated()) {
+              var user = window.AuthService.getCurrentUser();
+              updateAuthUI(user);
+            }
+            
+            renderHome();
+          }
+        }
+      });
+    }
   }
 
   // ── Subject View ─────────────────────────────────────────────

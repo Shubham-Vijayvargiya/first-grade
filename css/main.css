@@ -1114,3 +1114,21 @@ h6 { font-size: var(--font-size-md); }
   box-shadow: 1px 1px 0px #212529;
 }
 
+.edit-name-btn {
+  font-size: var(--font-size-md);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 4px;
+  vertical-align: middle;
+  transition: transform var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-name-btn:hover {
+  transform: scale(1.25);
+}
+
+
