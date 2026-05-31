@@ -41,7 +41,10 @@ window.QuizEngine = (function () {
     // Question card
     html += '<div class="quiz-question-card">';
     html += '<div class="quiz-question-number">Question ' + (currentIndex + 1) + '</div>';
-    html += '<div class="quiz-question-text">' + (q.question || q.text || '') + '</div>';
+    html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:var(--space-md)">' +
+      '<div class="quiz-question-text" style="margin-bottom:0">' + (q.question || q.text || '') + '</div>' +
+      '<button class="btn-icon speak-btn" data-text="' + (q.question || q.text || '').replace(/"/g, '&quot;') + '" title="Read Aloud">🔊</button>' +
+      '</div>';
 
     // Options based on type
     if (q.type === 'true-false') {
@@ -60,6 +63,7 @@ window.QuizEngine = (function () {
           '<span class="quiz-option-letter">' + letters[i] + '</span>' +
           '<span class="quiz-option-bubble"></span>' +
           '<span class="quiz-option-text">' + opt + '</span>' +
+          '<button class="btn-icon speak-btn" data-text="' + opt.replace(/"/g, '&quot;') + '" title="Read Aloud" style="margin-left:auto;z-index:2">🔊</button>' +
           '<span class="quiz-option-feedback"></span>' +
           '</div>';
       });
@@ -79,11 +83,25 @@ window.QuizEngine = (function () {
     html += '</div>'; // end quiz-view
 
     container.innerHTML = html;
+    bindSpeakButtons(container);
 
     // Bind events
     setTimeout(function () {
       bindQuizEvents(q);
     }, 50);
+  }
+
+  function bindSpeakButtons(container) {
+    var target = container || document;
+    target.querySelectorAll('.speak-btn').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var text = btn.dataset.text;
+        if (window.AudioService && window.AudioService.speak) {
+          window.AudioService.speak(text);
+        }
+      });
+    });
   }
 
   function bindQuizEvents(q) {

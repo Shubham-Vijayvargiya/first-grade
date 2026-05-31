@@ -146,11 +146,8 @@
     if (user) {
       var html = '<div class="auth-user-profile">';
       var displayName = Storage.getStudentName() || user.name || 'Champion';
-      if (user.avatar) {
-        html += '<img src="' + escapeHtml(user.avatar) + '" alt="' + escapeHtml(displayName) + '" class="auth-user-avatar">';
-      } else {
-        html += '<span class="auth-user-avatar" style="display:flex;align-items:center;justify-content:center;font-size:1.2rem;background:#E9ECEF">👤</span>';
-      }
+      var avatar = (typeof Storage !== 'undefined' && typeof Storage.getAvatar === 'function') ? Storage.getAvatar() : '👦';
+      html += '<span class="auth-user-avatar" style="display:flex;align-items:center;justify-content:center;font-size:1.5rem;background:#E9ECEF;border-radius:50%;width:38px;height:38px;border:2px solid var(--color-primary);line-height:1">' + avatar + '</span>';
       html += '<div class="auth-user-info" style="display:flex;flex-direction:column;align-items:flex-start">';
       html += '<span class="auth-user-name" title="' + escapeHtml(user.email) + '">' + escapeHtml(displayName) + '</span>';
       html += '<button id="header-switch-profile-btn" class="btn-link btn-xs" style="color:var(--color-secondary-dark);font-size:0.75rem;padding:0;font-weight:700;cursor:pointer;border:none;background:none">🔄 Switch Profile</button>';
@@ -236,6 +233,11 @@
     var parts = hash.split('/');
     var route = parts[0];
 
+    // Stop reading aloud when changing views
+    if (window.AudioService && window.AudioService.stopSpeaking) {
+      window.AudioService.stopSpeaking();
+    }
+
     AnimUtils.scrollToTop();
 
     switch (route) {
@@ -280,6 +282,26 @@
     html += '<h1 class="home-banner-name glow-text">' + escapeHtml(name) + ' <button id="edit-name-btn" class="edit-name-btn" title="Change Name">✏️</button>!</h1>';
     html += '<p class="home-banner-tagline">Ready to level up your 1st Grade learning? Pick a game zone!</p>';
     html += '</div>';
+
+    // Adaptive Learning Zone
+    var recs = Progress.getRecommendations();
+    if (recs && recs.length > 0) {
+      html += '<div class="adaptive-zone anim-fade-in">';
+      html += '<div class="section-header"><h2>🎯 Recommended Practice</h2><div class="section-header-line"></div></div>';
+      html += '<div class="recommendation-cards">';
+      recs.forEach(function (rec) {
+        var href = rec.type === 'quiz' ? '#quiz/' + rec.moduleId : '#lesson/' + rec.moduleId + '/' + rec.id;
+        html += '<div class="recommendation-card card-clickable" data-href="' + href + '">';
+        html += '<div class="recommendation-card-header">';
+        html += '<span class="recommendation-card-subject-tag tag-' + rec.subject + '">' + rec.subjectIcon + ' ' + rec.subject.toUpperCase() + '</span>';
+        html += '</div>';
+        html += '<h3 class="recommendation-card-title">' + rec.title + '</h3>';
+        html += '<p class="recommendation-card-reason">💡 ' + rec.reason + '</p>';
+        html += '</div>';
+      });
+      html += '</div>';
+      html += '</div>';
+    }
 
     // Stats row
     html += '<div class="home-stats stagger-children">';
@@ -527,6 +549,7 @@
     html += '<button class="progress-tab active" data-tab="overview">📈 Overview</button>';
     html += '<button class="progress-tab" data-tab="badges">🏅 Trophies</button>';
     html += '<button class="progress-tab" data-tab="detailed">📋 Detailed</button>';
+    html += '<button class="progress-tab" data-tab="shop">🛍️ Avatar Shop</button>';
     html += '</div>';
 
     // Tab content
@@ -563,6 +586,9 @@
         break;
       case 'detailed':
         renderDetailedTab(container);
+        break;
+      case 'shop':
+        renderShopTab(container);
         break;
     }
   }
@@ -609,6 +635,105 @@
     document.querySelectorAll('.progress-subject-row').forEach(function (row) {
       row.addEventListener('click', function () {
         window.location.hash = row.dataset.href;
+      });
+    });
+  }
+
+  function renderShopTab(container) {
+    var shopAvatars = [
+      { emoji: '👦', name: 'Starter Boy', cost: 0 },
+      { emoji: '👧', name: 'Starter Girl', cost: 0 },
+      { emoji: '👶', name: 'Baby Champion', cost: 0 },
+      { emoji: '🦁', name: 'Roaring Lion', cost: 100 },
+      { emoji: '🐼', name: 'Playful Panda', cost: 100 },
+      { emoji: '🚀', name: 'Space Rocket', cost: 200 },
+      { emoji: '🦖', name: 'Cool Dino', cost: 200 },
+      { emoji: '🦄', name: 'Magic Unicorn', cost: 300 },
+      { emoji: '🎨', name: 'Artist Palette', cost: 300 },
+      { emoji: '⚽', name: 'Soccer Ball', cost: 400 },
+      { emoji: '🏆', name: 'Golden Trophy', cost: 500 }
+    ];
+
+    var currentPoints = Storage.getTotalPoints();
+    var unlocked = Storage.getUnlockedAvatars();
+    var activeAvatar = Storage.getAvatar();
+
+    var html = '<div class="avatar-shop anim-fade-in">';
+    html += '<h2 class="shop-title">🛍️ Avatar Customization Shop</h2>';
+    html += '<p class="shop-subtitle">Use your points (⭐) to unlock new avatars and customize your profile!</p>';
+    html += '<div class="shop-points-badge">Your Points: <span>⭐ ' + currentPoints + '</span></div>';
+
+    html += '<div class="shop-grid">';
+    shopAvatars.forEach(function (avatar) {
+      var isUnlocked = unlocked.indexOf(avatar.emoji) !== -1 || avatar.cost === 0;
+      var isActive = activeAvatar === avatar.emoji;
+      
+      html += '<div class="shop-card ' + (isActive ? 'active' : '') + '">';
+      html += '<div class="shop-avatar-emoji">' + avatar.emoji + '</div>';
+      html += '<div class="shop-avatar-name">' + avatar.name + '</div>';
+      
+      if (isActive) {
+        html += '<button class="btn btn-secondary btn-sm" disabled style="background-color:var(--color-success);color:white">Selected</button>';
+      } else if (isUnlocked) {
+        html += '<button class="btn btn-accent btn-sm select-avatar-btn" data-emoji="' + avatar.emoji + '">Use Avatar</button>';
+      } else {
+        var canAfford = currentPoints >= avatar.cost;
+        html += '<button class="btn btn-primary btn-sm unlock-avatar-btn" data-emoji="' + avatar.emoji + '" data-cost="' + avatar.cost + '" ' + (canAfford ? '' : 'disabled') + '>';
+        html += 'Unlock (' + avatar.cost + '⭐)';
+        html += '</button>';
+      }
+      html += '</div>';
+    });
+    html += '</div>'; // end shop-grid
+    html += '</div>';
+
+    container.innerHTML = html;
+
+    // Bind Use buttons
+    container.querySelectorAll('.select-avatar-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var emoji = btn.dataset.emoji;
+        Storage.setAvatar(emoji);
+        AudioService.correct();
+        
+        // Instant update of header avatar
+        if (window.AuthService && window.AuthService.isAuthenticated()) {
+          var user = window.AuthService.getCurrentUser();
+          updateAuthUI(user);
+        }
+        
+        // Re-render shop tab
+        renderShopTab(container);
+      });
+    });
+
+    // Bind Unlock buttons
+    container.querySelectorAll('.unlock-avatar-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var emoji = btn.dataset.emoji;
+        var cost = parseInt(btn.dataset.cost);
+        if (Storage.unlockAvatar(emoji, cost)) {
+          AudioService.levelUp();
+          Progress.updateHeaderStats();
+          
+          // Instant update of header avatar
+          if (window.AuthService && window.AuthService.isAuthenticated()) {
+            var user = window.AuthService.getCurrentUser();
+            updateAuthUI(user);
+          }
+          
+          // Show unlock celebration overlay
+          Rewards.showCelebration(
+            'Avatar Unlocked!',
+            'You unlocked the ' + emoji + ' avatar! Looking good, champion!',
+            '🎉'
+          );
+          
+          // Re-render shop tab
+          renderShopTab(container);
+        } else {
+          alert('Not enough points! Keep completing lessons to earn more ⭐.');
+        }
       });
     });
   }
@@ -854,8 +979,9 @@
     keys.forEach(function (key) {
       var prof = profiles[key];
       var points = prof.totalPoints || 0;
+      var avatar = prof.avatar || '👦';
       html += '<div class="profile-card" data-profile-id="' + key + '">';
-      html += '<div class="profile-avatar-large">👦</div>';
+      html += '<div class="profile-avatar-large">' + avatar + '</div>';
       html += '<div class="profile-name">' + escapeHtml(prof.studentName) + '</div>';
       html += '<div style="font-size:0.8rem;color:var(--text-muted)">⭐ ' + points + ' pts</div>';
       if (keys.length > 1) {

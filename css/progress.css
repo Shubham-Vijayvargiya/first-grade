@@ -608,3 +608,89 @@
     width: 60px;
   }
 }
+
+/* ── Avatar Shop Tab ────────────────────────────────────────── */
+.avatar-shop {
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.shop-title {
+  text-align: center;
+  font-size: var(--font-size-2xl);
+  margin-bottom: var(--space-xs);
+}
+
+.shop-subtitle {
+  text-align: center;
+  font-size: var(--font-size-md);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-lg);
+}
+
+.shop-points-badge {
+  text-align: center;
+  font-family: var(--font-heading);
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--space-xl);
+  background: var(--bg-card);
+  padding: 8px 24px;
+  border-radius: var(--radius-pill);
+  display: inline-block;
+  margin-left: auto;
+  margin-right: auto;
+  border: 2px solid #212529;
+  box-shadow: 2px 2px 0px #212529;
+}
+
+.shop-points-badge span {
+  color: var(--color-secondary-dark);
+  font-weight: 800;
+}
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-lg);
+}
+
+.shop-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--space-lg);
+  background: var(--bg-card);
+  border: 2px solid #212529;
+  border-radius: var(--radius-xl);
+  transition: all var(--transition-normal);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 3px 3px 0px #212529;
+}
+
+.shop-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0px #212529;
+}
+
+.shop-card.active {
+  border-color: var(--color-primary);
+  box-shadow: 4px 4px 0px var(--color-primary);
+  background: #E8F5E9; /* Light green tint for active background */
+}
+
+.shop-avatar-emoji {
+  font-size: 3rem;
+  margin-bottom: var(--space-sm);
+  display: block;
+}
+
+.shop-avatar-name {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-md);
+  font-weight: 700;
+  color: #212529;
+}

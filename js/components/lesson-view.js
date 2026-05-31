@@ -18,6 +18,19 @@ window.LessonView = (function () {
       '</div>';
   }
 
+  function bindSpeakButtons(container) {
+    var target = container || document;
+    target.querySelectorAll('.speak-btn').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var text = btn.dataset.text;
+        if (window.AudioService && window.AudioService.speak) {
+          window.AudioService.speak(text);
+        }
+      });
+    });
+  }
+
   function render(container, moduleId, lessonId) {
     var mod = Progress.findModule(moduleId);
     var lesson = Progress.findLesson(moduleId, lessonId);
@@ -50,6 +63,7 @@ window.LessonView = (function () {
     html += '</div>'; // end lesson-view
 
     container.innerHTML = html;
+    bindSpeakButtons(container);
 
     // Render initial step content
     renderStepContent('learn');
@@ -97,7 +111,10 @@ window.LessonView = (function () {
   function renderLessonHeader(lesson) {
     return '<div class="lesson-header">' +
       '<div class="lesson-number">Lesson ' + lesson.number + '</div>' +
-      '<h1 class="lesson-title">' + lesson.title + '</h1>' +
+      '<div style="display:flex;align-items:center;gap:12px">' +
+        '<h1 class="lesson-title">' + lesson.title + '</h1>' +
+        '<button class="btn-icon speak-btn" data-text="Lesson ' + lesson.number + ': ' + lesson.title + '" title="Read Aloud">🔊</button>' +
+      '</div>' +
       '</div>';
   }
 
@@ -142,8 +159,12 @@ window.LessonView = (function () {
 
     // Main explanation
     if (learn.title) {
+      var allParagraphs = (learn.paragraphs || []).join(' ');
       html += '<div class="learn-section">';
-      html += '<h3 class="learn-section-title">📚 ' + learn.title + '</h3>';
+      html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:var(--space-sm)">' +
+                '<h3 class="learn-section-title" style="margin-bottom:0">📚 ' + learn.title + '</h3>' +
+                '<button class="btn-icon speak-btn" data-text="' + learn.title + '. ' + allParagraphs + '" title="Read Aloud">🔊</button>' +
+              '</div>';
       (learn.paragraphs || []).forEach(function (p) {
         html += '<p class="learn-paragraph">' + p + '</p>';
       });
@@ -152,8 +173,9 @@ window.LessonView = (function () {
 
     // Highlight/key concept
     if (learn.keyPoint) {
-      html += '<div class="learn-highlight">';
-      html += '<span class="learn-highlight-icon">💡</span> ' + learn.keyPoint;
+      html += '<div class="learn-highlight" style="display:flex;align-items:center;justify-content:between;gap:12px">';
+      html += '<div><span class="learn-highlight-icon">💡</span> ' + learn.keyPoint + '</div>';
+      html += '<button class="btn-icon speak-btn" data-text="Remember: ' + learn.keyPoint + '" title="Read Aloud" style="flex-shrink:0">🔊</button>';
       html += '</div>';
     }
 
@@ -175,9 +197,10 @@ window.LessonView = (function () {
 
     // Tip
     if (learn.tip) {
-      html += '<div class="learn-tip">';
+      html += '<div class="learn-tip" style="display:flex;align-items:center;justify-content:between;gap:12px">';
       html += '<span class="learn-tip-icon">🌟</span>';
-      html += '<div class="learn-tip-text">' + learn.tip + '</div>';
+      html += '<div class="learn-tip-text" style="flex-grow:1">' + learn.tip + '</div>';
+      html += '<button class="btn-icon speak-btn" data-text="Tip: ' + learn.tip + '" title="Read Aloud" style="flex-shrink:0">🔊</button>';
       html += '</div>';
     }
 
@@ -190,6 +213,7 @@ window.LessonView = (function () {
 
     html += '</div>'; // end step-content
     area.innerHTML = html;
+    bindSpeakButtons(area);
 
     // Bind learn done
     var doneBtn = document.getElementById('learn-done-btn');
@@ -270,7 +294,10 @@ window.LessonView = (function () {
       html += '<div class="quiz-question-card">';
       html += renderWorksheetHeader();
       html += '<div class="quiz-question-number">Check ' + (currentQ + 1) + ' of ' + questions.length + '</div>';
-      html += '<div class="quiz-question-text">' + q.question + '</div>';
+      html += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:var(--space-md)">' +
+                '<div class="quiz-question-text" style="margin-bottom:0">' + q.question + '</div>' +
+                '<button class="btn-icon speak-btn" data-text="' + q.question + '" title="Read Aloud">🔊</button>' +
+              '</div>';
       html += '<div class="quiz-options">';
       (q.options || []).forEach(function (opt, i) {
         html += '<div class="quiz-option" data-index="' + i + '">';
@@ -287,6 +314,7 @@ window.LessonView = (function () {
       html += '</div>';
 
       area.innerHTML = html;
+      bindSpeakButtons(area);
 
       var answered = false;
       var options = document.querySelectorAll('.quiz-option');

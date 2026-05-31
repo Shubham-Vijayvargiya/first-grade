@@ -60,9 +60,10 @@ window.Activities = (function () {
 
     container.innerHTML =
       '<div class="activity-container">' +
-        '<div class="activity-instruction">' +
+        '<div class="activity-instruction" style="display:flex;align-items:center;gap:12px">' +
           '<span class="activity-instruction-icon">🎯</span> ' +
-          '<span>' + (activity.instruction || 'Complete the activity!') + '</span>' +
+          '<span style="flex-grow:1">' + (activity.instruction || 'Complete the activity!') + '</span>' +
+          '<button class="btn-icon speak-btn" data-text="' + (activity.instruction || 'Complete the activity!').replace(/"/g, '&quot;') + '" title="Read Aloud" style="flex-shrink:0">🔊</button>' +
         '</div>' +
         '<div class="activity-content" id="activity-content">' + html + '</div>' +
         '<div class="activity-feedback hidden" id="activity-feedback"></div>' +
@@ -70,6 +71,8 @@ window.Activities = (function () {
           '<button class="btn btn-primary btn-lg" id="check-activity-btn">✅ Check My Answer</button>' +
         '</div>' +
       '</div>';
+
+    bindSpeakButtons(container);
 
     // Bind events based on type
     setTimeout(function () {
@@ -79,7 +82,10 @@ window.Activities = (function () {
 
   // ── Multiple Choice ──────────────────────────────────────────
   function renderMultipleChoice(activity) {
-    var html = '<div class="mc-question"><p class="mc-question-text">' + (activity.question || '') + '</p></div>';
+    var html = '<div class="mc-question" style="display:flex;align-items:center;gap:12px">' +
+      '<p class="mc-question-text" style="margin-bottom:0">' + (activity.question || '') + '</p>' +
+      '<button class="btn-icon speak-btn" data-text="' + (activity.question || '').replace(/"/g, '&quot;') + '" title="Read Aloud">🔊</button>' +
+      '</div>';
     html += '<div class="mc-options">';
     var letters = ['A', 'B', 'C', 'D'];
     (activity.options || []).forEach(function (opt, i) {
@@ -87,6 +93,7 @@ window.Activities = (function () {
         '<span class="quiz-option-letter">' + letters[i] + '</span>' +
         '<span class="quiz-option-bubble"></span>' +
         '<span class="quiz-option-text">' + opt + '</span>' +
+        '<button class="btn-icon speak-btn" data-text="' + opt.replace(/"/g, '&quot;') + '" title="Read Aloud" style="margin-left:auto;z-index:2">🔊</button>' +
         '</div>';
     });
     html += '</div>';
@@ -95,7 +102,11 @@ window.Activities = (function () {
 
   // ── True/False ───────────────────────────────────────────────
   function renderTrueFalse(activity) {
-    var html = '<div class="mc-question"><p class="mc-question-text">' + (activity.question || activity.statement || '') + '</p></div>';
+    var text = activity.question || activity.statement || '';
+    var html = '<div class="mc-question" style="display:flex;align-items:center;gap:12px">' +
+      '<p class="mc-question-text" style="margin-bottom:0">' + text + '</p>' +
+      '<button class="btn-icon speak-btn" data-text="' + text.replace(/"/g, '&quot;') + '" title="Read Aloud">🔊</button>' +
+      '</div>';
     html += '<div class="quiz-tf-options">' +
       '<div class="quiz-tf-option quiz-option" data-value="true"><span class="quiz-option-bubble"></span><span class="quiz-tf-icon">✅</span><span>True</span></div>' +
       '<div class="quiz-tf-option quiz-option" data-value="false"><span class="quiz-option-bubble"></span><span class="quiz-tf-icon">❌</span><span>False</span></div>' +
@@ -752,7 +763,7 @@ window.Activities = (function () {
     html += '<div class="word-search-words">';
     words.forEach(function(word) {
       var wordText = typeof word === 'object' ? word.word : word;
-      html += '<span class="word-search-word" data-word="' + wordText.toUpperCase() + '">' + wordText + '</span>';
+      html += '<span class="word-search-word" data-word="' + wordText.toUpperCase() + '">' + wordText + ' <button class="btn-icon speak-btn" data-text="' + wordText.replace(/"/g, '&quot;') + '" title="Read Aloud" style="padding:0;font-size:12px;background:none;border:none;margin-left:4px;cursor:pointer">🔊</button></span>';
     });
     html += '</div>';
     html += '</div>';
@@ -824,7 +835,11 @@ window.Activities = (function () {
       }
       html += '<div class="missing-letter-word-wrap">';
       var textToShow = card.text || card.word;
-      html += '<div class="missing-letter-word">' + textToShow + '</div>';
+      var speakWord = card.word || textToShow.replace(/_/g, '');
+      html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:var(--space-xs)">' +
+        '<div class="missing-letter-word" style="margin-bottom:0">' + textToShow + '</div>' +
+        '<button class="btn-icon speak-btn" data-text="' + speakWord.replace(/"/g, '&quot;') + '" title="Read Aloud" style="padding:4px">🔊</button>' +
+        '</div>';
       
       html += '<div class="missing-letter-options">';
       (card.options || []).forEach(function (opt) {
@@ -889,7 +904,10 @@ window.Activities = (function () {
   // ── Read Fluency Rendering and Events ─────────────────────────
   function renderReadFluency(activity) {
     var html = '<div class="read-fluency-container">';
-    html += '<div class="read-fluency-passage">' + (activity.passage || '') + '</div>';
+    html += '<div style="display:flex;align-items:start;gap:12px;margin-bottom:var(--space-md)">' +
+      '<div class="read-fluency-passage" style="flex-grow:1;text-align:left">' + (activity.passage || '') + '</div>' +
+      '<button class="btn-icon speak-btn" data-text="' + (activity.passage || '').replace(/"/g, '&quot;') + '" title="Read Aloud" style="margin-top:4px;flex-shrink:0">🔊</button>' +
+      '</div>';
     html += '<p style="margin-top: 15px; font-weight: bold;">Tap a star for each time you read the story out loud!</p>';
     html += '<div class="read-fluency-stars">';
     for (var i = 0; i < 3; i++) {
@@ -1013,6 +1031,19 @@ window.Activities = (function () {
         finishActivity(allCorrect, onComplete);
       });
     }
+  }
+
+  function bindSpeakButtons(container) {
+    var target = container || document;
+    target.querySelectorAll('.speak-btn').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var text = btn.dataset.text;
+        if (window.AudioService && window.AudioService.speak) {
+          window.AudioService.speak(text);
+        }
+      });
+    });
   }
 
   return {

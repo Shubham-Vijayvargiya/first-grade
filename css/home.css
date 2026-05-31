@@ -414,3 +414,63 @@
     font-size: 2.5rem;
   }
 }
+
+/* ── Adaptive Learning Zone / Recommendations ──────────────── */
+.adaptive-zone {
+  margin-bottom: var(--space-2xl);
+}
+
+.recommendation-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+}
+
+.recommendation-card {
+  background: #FFFFFF;
+  border: 2px solid #212529;
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  box-shadow: 4px 4px 0px #212529;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  text-align: left;
+}
+
+.recommendation-card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px #212529;
+}
+
+.recommendation-card-header {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.recommendation-card-subject-tag {
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 2px solid #212529;
+}
+
+.recommendation-card-title {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-lg);
+  margin: 0;
+  color: #212529;
+}
+
+.recommendation-card-reason {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 0;
+  font-weight: 600;
+}

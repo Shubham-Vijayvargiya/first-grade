@@ -171,6 +171,8 @@ window.Storage = (function () {
           streak: Math.max(lProf.streak || 0, rProf.streak || 0),
           lastStreakDate: rProf.lastStreakDate || lProf.lastStreakDate || '',
           totalPoints: Math.max(lProf.totalPoints || 0, rProf.totalPoints || 0),
+          avatar: rProf.avatar || lProf.avatar || '👦',
+          unlockedAvatars: Array.from(new Set((lProf.unlockedAvatars || ['👦', '👧', '👶']).concat(rProf.unlockedAvatars || ['👦', '👧', '👶']))),
           lessons: Object.assign({}, lProf.lessons || {}, rProf.lessons || {}),
           quizzes: Object.assign({}, lProf.quizzes || {}, rProf.quizzes || {}),
           badges: Array.from(new Set((lProf.badges || []).concat(rProf.badges || []))),
@@ -214,6 +216,8 @@ window.Storage = (function () {
           streak: 0,
           lastStreakDate: '',
           totalPoints: 0,
+          avatar: '👦',
+          unlockedAvatars: ['👦', '👧', '👶'],
           lessons: {},
           quizzes: {},
           badges: [],
@@ -249,6 +253,8 @@ window.Storage = (function () {
           streak: 0,
           lastStreakDate: '',
           totalPoints: 0,
+          avatar: '👦',
+          unlockedAvatars: ['👦', '👧', '👶'],
           lessons: {},
           quizzes: {},
           badges: [],
@@ -308,6 +314,8 @@ window.Storage = (function () {
         streak: 0,
         lastStreakDate: '',
         totalPoints: 0,
+        avatar: '👦',
+        unlockedAvatars: ['👦', '👧', '👶'],
         lessons: {},
         quizzes: {},
         badges: [],
@@ -331,6 +339,48 @@ window.Storage = (function () {
       saveAll(data);
       console.log('Storage: Deleted profile', profileId);
       return true;
+    },
+
+    getAvatar: function () {
+      return getActiveProfile().avatar || '👦';
+    },
+
+    setAvatar: function (emoji) {
+      var data = ensureData();
+      var activeId = data.activeProfileId || 'default';
+      var prof = data.profiles[activeId];
+      if (prof && prof.unlockedAvatars && prof.unlockedAvatars.indexOf(emoji) !== -1) {
+        prof.avatar = emoji;
+        saveAll(data);
+        return true;
+      }
+      return false;
+    },
+
+    getUnlockedAvatars: function () {
+      return getActiveProfile().unlockedAvatars || ['👦', '👧', '👶'];
+    },
+
+    unlockAvatar: function (emoji, cost) {
+      var data = ensureData();
+      var activeId = data.activeProfileId || 'default';
+      var prof = data.profiles[activeId];
+      if (prof) {
+        var currentPoints = prof.totalPoints || 0;
+        if (currentPoints >= cost) {
+          prof.totalPoints = currentPoints - cost;
+          if (!prof.unlockedAvatars) {
+            prof.unlockedAvatars = ['👦', '👧', '👶'];
+          }
+          if (prof.unlockedAvatars.indexOf(emoji) === -1) {
+            prof.unlockedAvatars.push(emoji);
+          }
+          prof.avatar = emoji;
+          saveAll(data);
+          return true;
+        }
+      }
+      return false;
     },
 
     // Get student name of current active profile

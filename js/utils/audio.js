@@ -163,6 +163,38 @@ window.AudioService = (function () {
     // Ensure context is ready (call on first user interaction)
     init: function () {
       resumeContext();
+    },
+
+    // Speak text aloud using HTML5 Web Speech API
+    speak: function (text) {
+      if (!enabled) return;
+      if ('speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel();
+          if (!text) return;
+
+          // Strip simple HTML tags if any (e.g. <strong>, etc.)
+          var cleanText = text.replace(/<\/?[^>]+(>|$)/g, "");
+
+          var utterance = new SpeechSynthesisUtterance(cleanText);
+          utterance.volume = 0.8;
+          utterance.rate = 0.85; // Slightly slower, easy to follow speed
+          utterance.pitch = 1.1; // Friendly higher pitch
+          
+          window.speechSynthesis.speak(utterance);
+        } catch (e) {
+          console.warn('SpeechSynthesis: Failed to speak', e);
+        }
+      }
+    },
+
+    // Stop active speech
+    stopSpeaking: function () {
+      if ('speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel();
+        } catch (e) {}
+      }
     }
   };
 })();

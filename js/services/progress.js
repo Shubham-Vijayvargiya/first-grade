@@ -63,6 +63,97 @@ window.Progress = (function () {
     findModule: findModule,
     findLesson: findLesson,
 
+    // Get recommendations for adaptive learning (up to 3 items)
+    getRecommendations: function () {
+      var recommendations = [];
+      var allModules = getAllModules();
+
+      // 1. Scan for lessons where learn is done, but practice or check is not done
+      for (var m = 0; m < allModules.length; m++) {
+        var mod = allModules[m];
+        if (!mod.lessons) continue;
+        for (var l = 0; l < mod.lessons.length; l++) {
+          var les = mod.lessons[l];
+          var status = Storage.getLessonStatus(les.id);
+          if (status) {
+            // Learn is done, but check or practice is not done, OR completed is false
+            if (status.learnDone && (!status.practiceDone || !status.checkDone || !status.completed)) {
+              var subjInfo = Progress.getSubjectInfo(mod.subject);
+              recommendations.push({
+                type: 'lesson',
+                moduleId: mod.id,
+                moduleTitle: mod.title,
+                subject: mod.subject,
+                subjectIcon: subjInfo ? subjInfo.icon : '📚',
+                title: les.title,
+                id: les.id,
+                icon: '🎯',
+                reason: 'Steps incomplete! Finish practice & check.'
+              });
+              if (recommendations.length >= 3) return recommendations;
+            }
+          }
+        }
+      }
+
+      // 2. Scan for completed quizzes where score is less than 80%
+      for (var m = 0; m < allModules.length; m++) {
+        var mod = allModules[m];
+        var qr = Storage.getQuizResult(mod.id);
+        if (qr) {
+          var pct = qr.total > 0 ? (qr.score / qr.total) : 0;
+          if (pct < 0.8) {
+            var subjInfo = Progress.getSubjectInfo(mod.subject);
+            recommendations.push({
+              type: 'quiz',
+              moduleId: mod.id,
+              moduleTitle: mod.title,
+              subject: mod.subject,
+              subjectIcon: subjInfo ? subjInfo.icon : '📝',
+              title: 'Quiz: ' + mod.title,
+              id: 'quiz',
+              icon: '📝',
+              reason: 'Retake quiz to get 80%+ and master!'
+            });
+            if (recommendations.length >= 3) return recommendations;
+          }
+        }
+      }
+
+      // 3. Fall back to the first incomplete lesson in the curriculum
+      for (var m = 0; m < allModules.length; m++) {
+        var mod = allModules[m];
+        if (!mod.lessons) continue;
+        for (var l = 0; l < mod.lessons.length; l++) {
+          var les = mod.lessons[l];
+          var status = Storage.getLessonStatus(les.id);
+          if (!status || !status.completed) {
+            var subjInfo = Progress.getSubjectInfo(mod.subject);
+            // Check if already in recommendations list
+            var alreadyAdded = recommendations.some(function (r) {
+              return r.type === 'lesson' && r.id === les.id;
+            });
+            if (!alreadyAdded) {
+              recommendations.push({
+                type: 'lesson',
+                moduleId: mod.id,
+                moduleTitle: mod.title,
+                subject: mod.subject,
+                subjectIcon: subjInfo ? subjInfo.icon : '📘',
+                title: les.title,
+                id: les.id,
+                icon: '📘',
+                reason: 'Up next in your learning path!'
+              });
+              if (recommendations.length >= 3) return recommendations;
+            }
+          }
+        }
+      }
+
+      return recommendations;
+    },
+
     // Get subject metadata
     getSubjectInfo: function (subjectId) {
       var data = window.AppData && window.AppData[subjectId];
