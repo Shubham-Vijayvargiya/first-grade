@@ -6,6 +6,53 @@
 window.AudioService = (function () {
   let audioCtx = null;
   let enabled = true;
+  let selectedVoice = null;
+
+  function findFemaleVoice() {
+    if (!('speechSynthesis' in window)) return null;
+    var voices = window.speechSynthesis.getVoices();
+    if (!voices || voices.length === 0) return null;
+    
+    var preferredNames = [
+      'google us english',
+      'microsoft aria',
+      'microsoft jenny',
+      'microsoft zira',
+      'samantha',
+      'karen',
+      'tessa',
+      'female'
+    ];
+    
+    var enVoices = voices.filter(function (v) {
+      return v.lang && v.lang.toLowerCase().indexOf('en') === 0;
+    });
+    
+    if (enVoices.length === 0) {
+      enVoices = voices;
+    }
+    
+    for (var i = 0; i < preferredNames.length; i++) {
+      var nameToFind = preferredNames[i];
+      for (var j = 0; j < enVoices.length; j++) {
+        var voice = enVoices[j];
+        if (voice.name && voice.name.toLowerCase().indexOf(nameToFind) !== -1) {
+          return voice;
+        }
+      }
+    }
+    
+    return enVoices[0] || null;
+  }
+
+  if ('speechSynthesis' in window) {
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = function () {
+        selectedVoice = findFemaleVoice();
+      };
+    }
+    selectedVoice = findFemaleVoice();
+  }
 
   function getContext() {
     if (!audioCtx) {
@@ -179,7 +226,21 @@ window.AudioService = (function () {
           var utterance = new SpeechSynthesisUtterance(cleanText);
           utterance.volume = 0.8;
           utterance.rate = 0.85; // Slightly slower, easy to follow speed
-          utterance.pitch = 1.1; // Friendly higher pitch
+          
+          if (!selectedVoice) {
+            selectedVoice = findFemaleVoice();
+          }
+          if (selectedVoice) {
+            utterance.voice = selectedVoice;
+            // Adjust pitch/rate slightly for naturalness if using standard voices
+            if (selectedVoice.name && selectedVoice.name.toLowerCase().indexOf('zira') !== -1) {
+              utterance.pitch = 1.2; // Slightly higher friendly pitch for Zira
+            } else {
+              utterance.pitch = 1.0;
+            }
+          } else {
+            utterance.pitch = 1.1; // Friendly higher pitch fallback
+          }
           
           window.speechSynthesis.speak(utterance);
         } catch (e) {
