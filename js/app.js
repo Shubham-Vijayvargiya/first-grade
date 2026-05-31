@@ -641,50 +641,71 @@
 
   function renderShopTab(container) {
     var shopAvatars = [
-      { emoji: '👦', name: 'Starter Boy', cost: 0 },
-      { emoji: '👧', name: 'Starter Girl', cost: 0 },
-      { emoji: '👶', name: 'Baby Champion', cost: 0 },
-      { emoji: '🦁', name: 'Roaring Lion', cost: 100 },
-      { emoji: '🐼', name: 'Playful Panda', cost: 100 },
-      { emoji: '🚀', name: 'Space Rocket', cost: 200 },
-      { emoji: '🦖', name: 'Cool Dino', cost: 200 },
-      { emoji: '🦄', name: 'Magic Unicorn', cost: 300 },
-      { emoji: '🎨', name: 'Artist Palette', cost: 300 },
-      { emoji: '⚽', name: 'Soccer Ball', cost: 400 },
-      { emoji: '🏆', name: 'Golden Trophy', cost: 500 }
+      { emoji: '🧽', name: 'SpongeBob', cost: 0 },
+      { emoji: '🌟', name: 'Patrick', cost: 0 },
+      { emoji: '🐙', name: 'Squidward', cost: 100 },
+      { emoji: '🦀', name: 'Mr. Krabs', cost: 100 },
+      { emoji: '🐿️', name: 'Sandy', cost: 200 },
+      { emoji: '🐌', name: 'Gary', cost: 200 },
+      { emoji: '🔬', name: 'Plankton', cost: 300 },
+      { emoji: '🍔', name: 'Krabby Patty', cost: 400 },
+      { emoji: '🍍', name: 'Pineapple House', cost: 500 }
     ];
 
     var currentPoints = Storage.getTotalPoints();
     var unlocked = Storage.getUnlockedAvatars();
     var activeAvatar = Storage.getAvatar();
 
+    var displayAvatars = shopAvatars.slice();
+    var isCustomActive = activeAvatar && (activeAvatar.indexOf('data:') === 0 || activeAvatar.indexOf('http') === 0 || activeAvatar.indexOf('/') === 0);
+    if (isCustomActive) {
+      // Check if custom avatar is already in the display list to avoid duplicate
+      var exists = displayAvatars.some(function (a) { return a.emoji === activeAvatar; });
+      if (!exists) {
+        displayAvatars.unshift({ emoji: activeAvatar, name: 'My Photo 📸', cost: 0 });
+      }
+    }
+
     var html = '<div class="avatar-shop anim-fade-in">';
-    html += '<h2 class="shop-title">🛍️ Avatar Customization Shop</h2>';
-    html += '<p class="shop-subtitle">Use your points (⭐) to unlock new avatars and customize your profile!</p>';
+    html += '<h2 class="shop-title">🛍️ SpongeBob & Custom Avatar Shop</h2>';
+    html += '<p class="shop-subtitle">Unlock your favorite SpongeBob characters or upload your own picture!</p>';
     html += '<div class="shop-points-badge">Your Points: <span>⭐ ' + currentPoints + '</span></div>';
 
     html += '<div class="shop-grid">';
-    shopAvatars.forEach(function (avatar) {
+    displayAvatars.forEach(function (avatar) {
       var isUnlocked = unlocked.indexOf(avatar.emoji) !== -1 || avatar.cost === 0;
       var isActive = activeAvatar === avatar.emoji;
       
       html += '<div class="shop-card ' + (isActive ? 'active' : '') + '">';
-      html += '<div class="shop-avatar-emoji">' + avatar.emoji + '</div>';
+      html += renderAvatarHTML(avatar.emoji, 'shop-avatar-emoji');
       html += '<div class="shop-avatar-name">' + avatar.name + '</div>';
       
       if (isActive) {
         html += '<button class="btn btn-secondary btn-sm" disabled style="background-color:var(--color-success);color:white">Selected</button>';
       } else if (isUnlocked) {
-        html += '<button class="btn btn-accent btn-sm select-avatar-btn" data-emoji="' + avatar.emoji + '">Use Avatar</button>';
+        html += '<button class="btn btn-accent btn-sm select-avatar-btn" data-emoji="' + escapeHtml(avatar.emoji) + '">Use Avatar</button>';
       } else {
         var canAfford = currentPoints >= avatar.cost;
-        html += '<button class="btn btn-primary btn-sm unlock-avatar-btn" data-emoji="' + avatar.emoji + '" data-cost="' + avatar.cost + '" ' + (canAfford ? '' : 'disabled') + '>';
+        html += '<button class="btn btn-primary btn-sm unlock-avatar-btn" data-emoji="' + escapeHtml(avatar.emoji) + '" data-cost="' + avatar.cost + '" ' + (canAfford ? '' : 'disabled') + '>';
         html += 'Unlock (' + avatar.cost + '⭐)';
         html += '</button>';
       }
       html += '</div>';
     });
     html += '</div>'; // end shop-grid
+
+    // Custom Image Upload Card
+    html += '<div class="shop-custom-upload">';
+    html += '<h3>📸 Use Your Own Photo</h3>';
+    html += '<p style="font-size:0.9rem;color:var(--text-muted)">Choose any picture from your device to use as your avatar!</p>';
+    html += '<input type="file" id="custom-avatar-input" accept="image/*" style="display:none">';
+    html += '<button class="btn btn-secondary btn-sm" id="choose-file-btn">📁 Choose Picture...</button>';
+    html += '<div id="upload-preview-container" style="display:none;flex-direction:column;align-items:center;gap:12px;margin-top:var(--space-md)">';
+    html += '  <img id="upload-preview" class="profile-avatar-large" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--color-primary)">';
+    html += '  <button class="btn btn-primary btn-sm" id="save-custom-avatar-btn">💾 Save Picture</button>';
+    html += '</div>';
+    html += '</div>'; // end custom upload
+
     html += '</div>';
 
     container.innerHTML = html;
@@ -736,6 +757,93 @@
         }
       });
     });
+
+    // Bind Image Upload events
+    var chooseBtn = container.querySelector('#choose-file-btn');
+    var fileInput = container.querySelector('#custom-avatar-input');
+    var previewContainer = container.querySelector('#upload-preview-container');
+    var previewImg = container.querySelector('#upload-preview');
+    var saveBtn = container.querySelector('#save-custom-avatar-btn');
+
+    if (chooseBtn && fileInput) {
+      chooseBtn.addEventListener('click', function () {
+        fileInput.click();
+      });
+    }
+
+    if (fileInput) {
+      fileInput.addEventListener('change', function () {
+        var file = fileInput.files[0];
+        if (!file) return;
+
+        var reader = new FileReader();
+        reader.onload = function (e) {
+          var img = new Image();
+          img.onload = function () {
+            // Draw on canvas to resize to 128x128 square
+            var canvas = document.createElement('canvas');
+            canvas.width = 128;
+            canvas.height = 128;
+            var ctx = canvas.getContext('2d');
+            
+            // Draw cropped to square
+            var minSize = Math.min(img.width, img.height);
+            var sx = (img.width - minSize) / 2;
+            var sy = (img.height - minSize) / 2;
+            ctx.drawImage(img, sx, sy, minSize, minSize, 0, 0, 128, 128);
+            
+            var base64 = canvas.toDataURL('image/jpeg', 0.8);
+            if (previewImg) {
+              previewImg.src = base64;
+            }
+            if (previewContainer) {
+              previewContainer.style.display = 'flex';
+            }
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    if (saveBtn) {
+      saveBtn.addEventListener('click', function () {
+        var base64 = previewImg.src;
+        if (base64) {
+          var data = Storage.getData();
+          var activeId = data.activeProfileId || 'default';
+          var prof = data.profiles[activeId];
+          if (prof) {
+            prof.avatar = base64;
+            if (!prof.unlockedAvatars) {
+              prof.unlockedAvatars = ['🧽', '🌟'];
+            }
+            if (prof.unlockedAvatars.indexOf(base64) === -1) {
+              prof.unlockedAvatars.push(base64);
+            }
+            Storage.setData(data); // Save and Sync
+            
+            AudioService.levelUp();
+            Progress.updateHeaderStats();
+            
+            // Update auth UI header
+            if (window.AuthService && window.AuthService.isAuthenticated()) {
+              var user = window.AuthService.getCurrentUser();
+              updateAuthUI(user);
+            }
+            
+            // Re-render shop
+            renderShopTab(container);
+            
+            Rewards.showCelebration(
+              'Avatar Set!',
+              'Your custom profile photo is ready, champion!',
+              '📸'
+            );
+          }
+        }
+      });
+    }
   }
 
   function renderBadgesTab(container) {
@@ -963,6 +1071,18 @@
     return div.innerHTML;
   }
 
+  function renderAvatarHTML(avatar, className, extraStyle) {
+    var isImage = avatar && (avatar.indexOf('data:') === 0 || avatar.indexOf('http') === 0 || avatar.indexOf('/') === 0);
+    var cls = className || 'profile-avatar-large';
+    var styleStr = extraStyle ? ' style="' + extraStyle + '"' : '';
+    
+    if (isImage) {
+      return '<img src="' + escapeHtml(avatar) + '" class="' + cls + '"' + styleStr + '>';
+    } else {
+      return '<div class="' + cls + '"' + styleStr + '>' + (avatar || '🧽') + '</div>';
+    }
+  }
+
   function showProfileSelectorModal() {
     var existing = document.getElementById('profile-selector-modal');
     if (existing) existing.remove();
@@ -979,9 +1099,9 @@
     keys.forEach(function (key) {
       var prof = profiles[key];
       var points = prof.totalPoints || 0;
-      var avatar = prof.avatar || '👦';
+      var avatar = prof.avatar || '🧽';
       html += '<div class="profile-card" data-profile-id="' + key + '">';
-      html += '<div class="profile-avatar-large">' + avatar + '</div>';
+      html += renderAvatarHTML(avatar, 'profile-avatar-large');
       html += '<div class="profile-name">' + escapeHtml(prof.studentName) + '</div>';
       html += '<div style="font-size:0.8rem;color:var(--text-muted)">⭐ ' + points + ' pts</div>';
       if (keys.length > 1) {
