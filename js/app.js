@@ -66,24 +66,21 @@
 
     // Listen for auth state changes
     if (window.AuthService) {
+      var isFirstAuth = true;
       window.AuthService.subscribe(function (user) {
         updateAuthUI(user);
         if (user) {
-          // If welcome modal is open, auto-close it if name exists
           var modal = document.getElementById('welcome-modal');
-          var name = Storage.getStudentName();
-          if (name) {
-            if (modal && !modal.classList.contains('hidden')) {
-              modal.classList.add('hidden');
-              handleRoute();
-            }
-          } else if (user.name) {
-            Storage.setStudentName(user.name);
-            if (modal && !modal.classList.contains('hidden')) {
-              modal.classList.add('hidden');
-              handleRoute();
+          if (modal && !modal.classList.contains('hidden')) {
+            modal.classList.add('hidden');
+            showProfileSelectorModal();
+          } else if (isFirstAuth) {
+            var profiles = Storage.getProfiles();
+            if (Object.keys(profiles).length > 1) {
+              showProfileSelectorModal();
             }
           }
+          isFirstAuth = false;
         }
       });
     }
@@ -121,13 +118,16 @@
 
     if (user) {
       var html = '<div class="auth-user-profile">';
-      var displayName = Storage.getStudentName() || user.name;
+      var displayName = Storage.getStudentName() || user.name || 'Champion';
       if (user.avatar) {
         html += '<img src="' + escapeHtml(user.avatar) + '" alt="' + escapeHtml(displayName) + '" class="auth-user-avatar">';
       } else {
         html += '<span class="auth-user-avatar" style="display:flex;align-items:center;justify-content:center;font-size:1.2rem;background:#E9ECEF">👤</span>';
       }
+      html += '<div class="auth-user-info" style="display:flex;flex-direction:column;align-items:flex-start">';
       html += '<span class="auth-user-name" title="' + escapeHtml(user.email) + '">' + escapeHtml(displayName) + '</span>';
+      html += '<button id="header-switch-profile-btn" class="btn-link btn-xs" style="color:var(--color-secondary-dark);font-size:0.75rem;padding:0;font-weight:700;cursor:pointer;border:none;background:none">🔄 Switch Profile</button>';
+      html += '</div>';
       html += '<button id="header-logout-btn" class="btn btn-outline btn-sm">Sign Out</button>';
       html += '</div>';
       container.innerHTML = html;
@@ -141,6 +141,13 @@
               window.location.reload();
             });
           }
+        });
+      }
+
+      var switchBtn = document.getElementById('header-switch-profile-btn');
+      if (switchBtn) {
+        switchBtn.addEventListener('click', function () {
+          showProfileSelectorModal();
         });
       }
     } else {
@@ -244,7 +251,7 @@
     html += '<span class="home-banner-mascot">🏆</span>';
     html += '<p class="home-banner-greeting">Hey there,</p>';
     html += '<h1 class="home-banner-name glow-text">' + escapeHtml(name) + ' <button id="edit-name-btn" class="edit-name-btn" title="Change Name">✏️</button>!</h1>';
-    html += '<p class="home-banner-tagline">Ready to level up your learning? Pick a game zone!</p>';
+    html += '<p class="home-banner-tagline">Ready to level up your 1st Grade learning? Pick a game zone!</p>';
     html += '</div>';
 
     // Stats row
@@ -802,6 +809,97 @@
     var div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  function showProfileSelectorModal() {
+    var existing = document.getElementById('profile-selector-modal');
+    if (existing) existing.remove();
+
+    var profiles = Storage.getProfiles();
+    var keys = Object.keys(profiles);
+
+    var html = '<div class="modal-content profile-modal-content">';
+    html += '<h2 class="welcome-title glow-text" style="margin-bottom:var(--space-xs)">Who is playing today?</h2>';
+    html += '<p class="welcome-subtitle">Select a profile or add a new child (1-5 children)</p>';
+    
+    html += '<div class="profile-grid">';
+    
+    keys.forEach(function (key) {
+      var prof = profiles[key];
+      var points = prof.totalPoints || 0;
+      html += '<div class="profile-card" data-profile-id="' + key + '">';
+      html += '<div class="profile-avatar-large">👦</div>';
+      html += '<div class="profile-name">' + escapeHtml(prof.studentName) + '</div>';
+      html += '<div style="font-size:0.8rem;color:var(--text-muted)">⭐ ' + points + ' pts</div>';
+      if (keys.length > 1) {
+        html += '<button class="delete-profile-btn" data-profile-id="' + key + '" title="Delete Profile" style="font-size:0.8rem;margin-top:var(--space-xs);color:var(--color-wrong);border:none;background:none;font-weight:700">Remove</button>';
+      }
+      html += '</div>';
+    });
+
+    if (keys.length < 5) {
+      html += '<div class="profile-card add-profile" id="add-profile-card">';
+      html += '<div class="profile-avatar-large" style="background:#F1F3F5;border-style:dashed">+</div>';
+      html += '<div class="profile-name" style="color:var(--text-muted)">Add Child</div>';
+      html += '</div>';
+    }
+
+    html += '</div>';
+    html += '<button id="close-profile-btn" class="btn btn-secondary btn-sm" style="margin-top:var(--space-md)">Cancel</button>';
+    html += '</div>';
+
+    var modalOverlay = document.createElement('div');
+    modalOverlay.id = 'profile-selector-modal';
+    modalOverlay.className = 'modal-overlay';
+    modalOverlay.innerHTML = html;
+    document.body.appendChild(modalOverlay);
+
+    modalOverlay.querySelectorAll('.profile-card[data-profile-id]').forEach(function (card) {
+      card.addEventListener('click', function (e) {
+        if (e.target.classList.contains('delete-profile-btn')) return;
+
+        var pid = card.dataset.profileId;
+        Storage.switchProfile(pid);
+        modalOverlay.remove();
+        
+        Progress.updateHeaderStats();
+        if (window.AuthService && window.AuthService.isAuthenticated()) {
+          var user = window.AuthService.getCurrentUser();
+          updateAuthUI(user);
+        }
+        handleRoute();
+      });
+    });
+
+    modalOverlay.querySelectorAll('.delete-profile-btn').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var pid = btn.dataset.profileId;
+        var prof = profiles[pid];
+        if (confirm('Are you sure you want to remove ' + prof.studentName + '\'s profile? This will delete all their progress!')) {
+          Storage.deleteProfile(pid);
+          showProfileSelectorModal();
+        }
+      });
+    });
+
+    var addCard = document.getElementById('add-profile-card');
+    if (addCard) {
+      addCard.addEventListener('click', function () {
+        var name = prompt("What is the child's name?");
+        if (name && name.trim().length > 0) {
+          Storage.createProfile(name.trim());
+          showProfileSelectorModal();
+        }
+      });
+    }
+
+    var closeBtn = document.getElementById('close-profile-btn');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function () {
+        modalOverlay.remove();
+      });
+    }
   }
 
   // ── Start ────────────────────────────────────────────────────

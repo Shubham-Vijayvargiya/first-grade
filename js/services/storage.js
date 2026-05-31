@@ -1,19 +1,61 @@
 /* ============================================================
    CHAMPION ACADEMY — Storage Service
-   Wrapper around localStorage
+   Wrapper around localStorage supporting 1-5 child profiles
    ============================================================ */
 
 window.Storage = (function () {
-  var STORAGE_KEY = 'champion_academy_data';
+  var STORAGE_KEY = 'champion_academy_data_v2'; // New key for 2.0 multi-profile compatibility
+  var LEGACY_KEY = 'champion_academy_data';
 
   function loadAll() {
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : null;
+      if (raw) {
+        return JSON.parse(raw);
+      }
+      
+      // Attempt legacy migration
+      var legacyRaw = localStorage.getItem(LEGACY_KEY);
+      if (legacyRaw) {
+        try {
+          var legacyData = JSON.parse(legacyRaw);
+          var migrated = migrateLegacy(legacyData);
+          saveAllLocal(migrated);
+          return migrated;
+        } catch (err) {
+          console.warn('Storage: failed to migrate legacy data', err);
+        }
+      }
+      return null;
     } catch (e) {
       console.warn('Storage: failed to load data', e);
       return null;
     }
+  }
+
+  function migrateLegacy(legacy) {
+    var defaults = getDefaults();
+    if (!legacy) return defaults;
+    
+    // Copy main settings
+    defaults.soundEnabled = legacy.soundEnabled !== false;
+    
+    // Convert old progress to the 'default' profile
+    if (legacy.studentName) {
+      var prof = defaults.profiles['default'];
+      prof.studentName = legacy.studentName;
+      prof.firstVisit = legacy.firstVisit || new Date().toISOString();
+      prof.lastVisit = legacy.lastVisit || new Date().toISOString();
+      prof.streak = legacy.streak || 0;
+      prof.lastStreakDate = legacy.lastStreakDate || '';
+      prof.totalPoints = legacy.totalPoints || 0;
+      prof.lessons = legacy.lessons || {};
+      prof.quizzes = legacy.quizzes || {};
+      prof.badges = legacy.badges || [];
+      prof.worksheetsPrinted = legacy.worksheetsPrinted || [];
+    }
+    
+    return defaults;
   }
 
   function saveAllLocal(data) {
@@ -41,7 +83,7 @@ window.Storage = (function () {
       .from('progress')
       .upsert({
         user_id: user.id,
-        student_name: data.studentName || user.name || '',
+        student_name: getActiveProfileName(data),
         data: data,
         updated_at: new Date().toISOString()
       })
@@ -52,6 +94,12 @@ window.Storage = (function () {
           console.log('Storage: Synced successfully to Supabase.');
         }
       });
+  }
+
+  function getActiveProfileName(data) {
+    var activeId = data.activeProfileId || 'default';
+    var prof = data.profiles[activeId];
+    return prof ? prof.studentName : 'Champion';
   }
 
   function fetchFromSupabase(userId, authUser) {
@@ -83,9 +131,11 @@ window.Storage = (function () {
         } else {
           console.log('Storage: No remote progress found. Syncing local progress to Supabase.');
           var localData = loadAll() || getDefaults();
-          // Use user name if student name is empty
-          if (!localData.studentName && authUser.name) {
-            localData.studentName = authUser.name;
+          
+          // Make sure default profile name matches user if default name is still 'Champion'
+          var activeId = localData.activeProfileId || 'default';
+          if (localData.profiles[activeId] && localData.profiles[activeId].studentName === 'Champion' && authUser.name) {
+            localData.profiles[activeId].studentName = authUser.name;
             saveAllLocal(localData);
           }
           syncToSupabase(localData);
@@ -99,22 +149,37 @@ window.Storage = (function () {
 
   function mergeProgress(local, remote) {
     var merged = getDefaults();
-    
-    merged.studentName = remote.studentName || local.studentName || '';
-    merged.streak = Math.max(local.streak || 0, remote.streak || 0);
-    merged.totalPoints = Math.max(local.totalPoints || 0, remote.totalPoints || 0);
     merged.soundEnabled = remote.soundEnabled !== undefined ? remote.soundEnabled : local.soundEnabled;
-    merged.lastStreakDate = remote.lastStreakDate || local.lastStreakDate || '';
-    merged.lastVisit = new Date(local.lastVisit || 0) > new Date(remote.lastVisit || 0) ? local.lastVisit : remote.lastVisit;
+    merged.activeProfileId = remote.activeProfileId || local.activeProfileId || 'default';
     
-    merged.lessons = Object.assign({}, local.lessons || {}, remote.lessons || {});
-    merged.quizzes = Object.assign({}, local.quizzes || {}, remote.quizzes || {});
+    // Merge all profiles
+    var localProfs = local.profiles || {};
+    var remoteProfs = remote.profiles || {};
     
-    var badges = (local.badges || []).concat(remote.badges || []);
-    merged.badges = Array.from(new Set(badges));
-    
-    var worksheets = (local.worksheetsPrinted || []).concat(remote.worksheetsPrinted || []);
-    merged.worksheetsPrinted = Array.from(new Set(worksheets));
+    var allKeys = Array.from(new Set(Object.keys(localProfs).concat(Object.keys(remoteProfs))));
+    allKeys.forEach(function (key) {
+      var lProf = localProfs[key];
+      var rProf = remoteProfs[key];
+      
+      if (lProf && rProf) {
+        // Merge them
+        merged.profiles[key] = {
+          id: key,
+          studentName: rProf.studentName || lProf.studentName || 'Champion',
+          firstVisit: lProf.firstVisit || rProf.firstVisit || new Date().toISOString(),
+          lastVisit: new Date(lProf.lastVisit || 0) > new Date(rProf.lastVisit || 0) ? lProf.lastVisit : rProf.lastVisit,
+          streak: Math.max(lProf.streak || 0, rProf.streak || 0),
+          lastStreakDate: rProf.lastStreakDate || lProf.lastStreakDate || '',
+          totalPoints: Math.max(lProf.totalPoints || 0, rProf.totalPoints || 0),
+          lessons: Object.assign({}, lProf.lessons || {}, rProf.lessons || {}),
+          quizzes: Object.assign({}, lProf.quizzes || {}, rProf.quizzes || {}),
+          badges: Array.from(new Set((lProf.badges || []).concat(rProf.badges || []))),
+          worksheetsPrinted: Array.from(new Set((lProf.worksheetsPrinted || []).concat(rProf.worksheetsPrinted || [])))
+        };
+      } else {
+        merged.profiles[key] = rProf || lProf;
+      }
+    });
     
     return merged;
   }
@@ -128,7 +193,7 @@ window.Storage = (function () {
     }
   }
 
-  // Subscribe to auth state changes when script finishes loading
+  // Subscribe to auth changes
   setTimeout(function () {
     if (window.AuthService) {
       window.AuthService.subscribe(handleAuthStateChange);
@@ -137,17 +202,24 @@ window.Storage = (function () {
 
   function getDefaults() {
     return {
-      studentName: '',
-      firstVisit: new Date().toISOString(),
-      lastVisit: new Date().toISOString(),
-      streak: 0,
-      lastStreakDate: '',
-      totalPoints: 0,
+      version: '2.0',
+      activeProfileId: 'default',
       soundEnabled: true,
-      lessons: {},       // { 'lesson-1-1': { completed: true, learnDone: true, practiceDone: true, checkDone: true, checkScore: 3, date: '...' } }
-      quizzes: {},       // { 'module-1': { score: 8, total: 10, stars: 2, points: 20, date: '...' } }
-      badges: [],        // ['phonics-star', 'word-wizard', ...]
-      worksheetsPrinted: [] // ['module-1', ...]
+      profiles: {
+        'default': {
+          id: 'default',
+          studentName: 'Champion',
+          firstVisit: new Date().toISOString(),
+          lastVisit: new Date().toISOString(),
+          streak: 0,
+          lastStreakDate: '',
+          totalPoints: 0,
+          lessons: {},
+          quizzes: {},
+          badges: [],
+          worksheetsPrinted: []
+        }
+      }
     };
   }
 
@@ -155,68 +227,146 @@ window.Storage = (function () {
     var data = loadAll();
     if (!data) {
       data = getDefaults();
-      saveAll(data);
+      saveAllLocal(data);
     }
     return data;
   }
 
+  // Helper to retrieve the current active profile object
+  function getActiveProfile() {
+    var data = ensureData();
+    var activeId = data.activeProfileId || 'default';
+    if (!data.profiles[activeId]) {
+      var keys = Object.keys(data.profiles);
+      activeId = keys[0] || 'default';
+      data.activeProfileId = activeId;
+      if (!data.profiles[activeId]) {
+        data.profiles[activeId] = {
+          id: activeId,
+          studentName: 'Champion',
+          firstVisit: new Date().toISOString(),
+          lastVisit: new Date().toISOString(),
+          streak: 0,
+          lastStreakDate: '',
+          totalPoints: 0,
+          lessons: {},
+          quizzes: {},
+          badges: [],
+          worksheetsPrinted: []
+        };
+      }
+    }
+    return data.profiles[activeId];
+  }
+
   return {
-    // Initialize and return stored data (or defaults)
     init: function () {
       return ensureData();
     },
 
-    // Get full data object
     getData: function () {
       return ensureData();
     },
 
-    // Save full data object
     setData: function (data) {
       saveAll(data);
     },
 
-    // Get a specific field
-    get: function (key) {
-      var data = ensureData();
-      return data[key];
+    // Profiles Configuration API (1-5 profiles)
+    getProfiles: function () {
+      return ensureData().profiles || {};
     },
 
-    // Set a specific field
-    set: function (key, value) {
+    getActiveProfileId: function () {
+      return ensureData().activeProfileId || 'default';
+    },
+
+    switchProfile: function (profileId) {
       var data = ensureData();
-      data[key] = value;
+      if (data.profiles[profileId]) {
+        data.activeProfileId = profileId;
+        saveAll(data);
+        console.log('Storage: Switched active profile to', profileId);
+        return true;
+      }
+      return false;
+    },
+
+    createProfile: function (name) {
+      var data = ensureData();
+      var keys = Object.keys(data.profiles);
+      if (keys.length >= 5) {
+        return null;
+      }
+      
+      var id = 'profile-' + Date.now();
+      data.profiles[id] = {
+        id: id,
+        studentName: name,
+        firstVisit: new Date().toISOString(),
+        lastVisit: new Date().toISOString(),
+        streak: 0,
+        lastStreakDate: '',
+        totalPoints: 0,
+        lessons: {},
+        quizzes: {},
+        badges: [],
+        worksheetsPrinted: []
+      };
+      data.activeProfileId = id;
       saveAll(data);
+      console.log('Storage: Created profile', name, 'with ID', id);
+      return id;
     },
 
-    // Get student name
+    deleteProfile: function (profileId) {
+      var data = ensureData();
+      if (Object.keys(data.profiles).length <= 1) {
+        return false;
+      }
+      delete data.profiles[profileId];
+      if (data.activeProfileId === profileId) {
+        data.activeProfileId = Object.keys(data.profiles)[0];
+      }
+      saveAll(data);
+      console.log('Storage: Deleted profile', profileId);
+      return true;
+    },
+
+    // Get student name of current active profile
     getStudentName: function () {
-      return ensureData().studentName || '';
+      return getActiveProfile().studentName || '';
     },
 
-    // Set student name
+    // Set student name of current active profile
     setStudentName: function (name) {
       var data = ensureData();
-      data.studentName = name;
-      saveAll(data);
+      var activeId = data.activeProfileId || 'default';
+      if (data.profiles[activeId]) {
+        data.profiles[activeId].studentName = name;
+        saveAll(data);
+      }
     },
 
-    // Check if first visit
+    // Check if first visit for the current active profile
     isFirstVisit: function () {
-      return !loadAll() || !loadAll().studentName;
+      var prof = getActiveProfile();
+      return !prof || prof.studentName === 'Champion';
     },
 
-    // Get lesson status
+    // Get lesson status for current active profile
     getLessonStatus: function (lessonId) {
-      var data = ensureData();
-      return data.lessons[lessonId] || null;
+      return getActiveProfile().lessons[lessonId] || null;
     },
 
-    // Save lesson step completion
+    // Save lesson step completion for current active profile
     saveLessonStep: function (lessonId, step) {
       var data = ensureData();
-      if (!data.lessons[lessonId]) {
-        data.lessons[lessonId] = {
+      var prof = data.profiles[data.activeProfileId || 'default'];
+      if (!prof) return null;
+
+      if (!prof.lessons[lessonId]) {
+        prof.lessons[lessonId] = {
           completed: false,
           learnDone: false,
           practiceDone: false,
@@ -225,24 +375,27 @@ window.Storage = (function () {
           date: ''
         };
       }
-      data.lessons[lessonId][step + 'Done'] = true;
+      prof.lessons[lessonId][step + 'Done'] = true;
 
       // Check if all steps are done
-      var l = data.lessons[lessonId];
+      var l = prof.lessons[lessonId];
       if (l.learnDone && l.practiceDone && l.checkDone) {
         l.completed = true;
         l.date = new Date().toISOString();
       }
 
       saveAll(data);
-      return data.lessons[lessonId];
+      return prof.lessons[lessonId];
     },
 
-    // Save check score for a lesson
+    // Save check score for current active profile
     saveLessonCheckScore: function (lessonId, score) {
       var data = ensureData();
-      if (!data.lessons[lessonId]) {
-        data.lessons[lessonId] = {
+      var prof = data.profiles[data.activeProfileId || 'default'];
+      if (!prof) return;
+
+      if (!prof.lessons[lessonId]) {
+        prof.lessons[lessonId] = {
           completed: false,
           learnDone: false,
           practiceDone: false,
@@ -251,91 +404,100 @@ window.Storage = (function () {
           date: ''
         };
       }
-      data.lessons[lessonId].checkScore = score;
-      data.lessons[lessonId].checkDone = true;
+      prof.lessons[lessonId].checkScore = score;
+      prof.lessons[lessonId].checkDone = true;
       saveAll(data);
     },
 
-    // Get quiz result
+    // Get quiz result for current active profile
     getQuizResult: function (moduleId) {
-      var data = ensureData();
-      return data.quizzes[moduleId] || null;
+      return getActiveProfile().quizzes[moduleId] || null;
     },
 
-    // Save quiz result
+    // Save quiz result for current active profile
     saveQuizResult: function (moduleId, score, total, stars, points) {
       var data = ensureData();
-      data.quizzes[moduleId] = {
+      var prof = data.profiles[data.activeProfileId || 'default'];
+      if (!prof) return;
+
+      prof.quizzes[moduleId] = {
         score: score,
         total: total,
         stars: stars,
         points: points,
         date: new Date().toISOString()
       };
-      data.totalPoints += points;
+      prof.totalPoints = (prof.totalPoints || 0) + points;
       saveAll(data);
     },
 
-    // Add points
+    // Add points to current active profile
     addPoints: function (points) {
       var data = ensureData();
-      data.totalPoints += points;
+      var prof = data.profiles[data.activeProfileId || 'default'];
+      if (!prof) return 0;
+
+      prof.totalPoints = (prof.totalPoints || 0) + points;
       saveAll(data);
-      return data.totalPoints;
+      return prof.totalPoints;
     },
 
-    // Get total points
+    // Get total points of current active profile
     getTotalPoints: function () {
-      return ensureData().totalPoints || 0;
+      return getActiveProfile().totalPoints || 0;
     },
 
-    // Badge management
+    // Badge management for current active profile
     hasBadge: function (badgeId) {
-      return ensureData().badges.indexOf(badgeId) !== -1;
+      return getActiveProfile().badges.indexOf(badgeId) !== -1;
     },
 
     awardBadge: function (badgeId) {
       var data = ensureData();
-      if (data.badges.indexOf(badgeId) === -1) {
-        data.badges.push(badgeId);
+      var prof = data.profiles[data.activeProfileId || 'default'];
+      if (!prof) return false;
+
+      if (prof.badges.indexOf(badgeId) === -1) {
+        prof.badges.push(badgeId);
         saveAll(data);
-        return true; // newly awarded
+        return true;
       }
-      return false; // already had it
+      return false;
     },
 
     getBadges: function () {
-      return ensureData().badges || [];
+      return getActiveProfile().badges || [];
     },
 
-    // Streak management
+    // Streak management for current active profile
     getStreak: function () {
-      return ensureData().streak || 0;
+      return getActiveProfile().streak || 0;
     },
 
     updateStreak: function () {
       var data = ensureData();
-      var today = new Date().toISOString().split('T')[0];
+      var prof = data.profiles[data.activeProfileId || 'default'];
+      if (!prof) return 0;
 
-      if (data.lastStreakDate === today) {
-        return data.streak;
+      var today = new Date().toISOString().split('T')[0];
+      if (prof.lastStreakDate === today) {
+        return prof.streak;
       }
 
       var yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-
-      if (data.lastStreakDate === yesterday) {
-        data.streak += 1;
-      } else if (data.lastStreakDate !== today) {
-        data.streak = 1;
+      if (prof.lastStreakDate === yesterday) {
+        prof.streak = (prof.streak || 0) + 1;
+      } else {
+        prof.streak = 1;
       }
 
-      data.lastStreakDate = today;
-      data.lastVisit = new Date().toISOString();
+      prof.lastStreakDate = today;
+      prof.lastVisit = new Date().toISOString();
       saveAll(data);
-      return data.streak;
+      return prof.streak;
     },
 
-    // Sound preference
+    // Sound preference (global config)
     isSoundEnabled: function () {
       var data = loadAll();
       return data ? data.soundEnabled !== false : true;
@@ -347,26 +509,29 @@ window.Storage = (function () {
       saveAll(data);
     },
 
-    // Worksheet tracking
+    // Worksheet tracking for current active profile
     markWorksheetPrinted: function (moduleId) {
       var data = ensureData();
-      if (data.worksheetsPrinted.indexOf(moduleId) === -1) {
-        data.worksheetsPrinted.push(moduleId);
+      var prof = data.profiles[data.activeProfileId || 'default'];
+      if (!prof) return;
+
+      if (prof.worksheetsPrinted.indexOf(moduleId) === -1) {
+        prof.worksheetsPrinted.push(moduleId);
         saveAll(data);
       }
     },
 
-    // Export progress as JSON
     exportProgress: function () {
       return JSON.stringify(ensureData(), null, 2);
     },
 
-    // Import progress from JSON
     importProgress: function (jsonStr) {
       try {
         var data = JSON.parse(jsonStr);
-        if (data && data.studentName) {
-          saveAll(data);
+        if (data && (data.profiles || data.studentName)) {
+          // If importing old schema, migrate it
+          var migrated = data.profiles ? data : migrateLegacy(data);
+          saveAll(migrated);
           return true;
         }
         return false;
@@ -375,9 +540,9 @@ window.Storage = (function () {
       }
     },
 
-    // Reset all progress
     resetAll: function () {
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(LEGACY_KEY);
     }
   };
 })();
