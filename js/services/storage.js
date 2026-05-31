@@ -16,13 +16,124 @@ window.Storage = (function () {
     }
   }
 
-  function saveAll(data) {
+  function saveAllLocal(data) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (e) {
       console.warn('Storage: failed to save data', e);
     }
   }
+
+  function saveAll(data) {
+    saveAllLocal(data);
+    syncToSupabase(data);
+  }
+
+  function syncToSupabase(data) {
+    if (!window.SupabaseService || !window.SupabaseService.isReady()) return;
+    if (!window.AuthService || !window.AuthService.isAuthenticated()) return;
+    
+    var user = window.AuthService.getCurrentUser();
+    if (!user) return;
+
+    var client = window.SupabaseService.getClient();
+    client
+      .from('progress')
+      .upsert({
+        user_id: user.id,
+        student_name: data.studentName || user.name || '',
+        data: data,
+        updated_at: new Date().toISOString()
+      })
+      .then(function (result) {
+        if (result.error) {
+          console.error('Storage: Supabase sync error', result.error);
+        } else {
+          console.log('Storage: Synced successfully to Supabase.');
+        }
+      });
+  }
+
+  function fetchFromSupabase(userId, authUser) {
+    if (!window.SupabaseService || !window.SupabaseService.isReady()) return;
+    var client = window.SupabaseService.getClient();
+
+    client
+      .from('progress')
+      .select('data')
+      .eq('user_id', userId)
+      .maybeSingle()
+      .then(function (result) {
+        if (result.error) {
+          console.error('Storage: Supabase fetch error', result.error);
+          return;
+        }
+
+        var remoteData = result.data && result.data.data;
+        if (remoteData) {
+          console.log('Storage: Found remote progress, merging...');
+          var localData = loadAll() || getDefaults();
+          var merged = mergeProgress(localData, remoteData);
+          saveAllLocal(merged);
+          
+          // Notify app components to reload their progress state
+          if (window.ProgressSyncCallback) {
+            window.ProgressSyncCallback();
+          }
+        } else {
+          console.log('Storage: No remote progress found. Syncing local progress to Supabase.');
+          var localData = loadAll() || getDefaults();
+          // Use user name if student name is empty
+          if (!localData.studentName && authUser.name) {
+            localData.studentName = authUser.name;
+            saveAllLocal(localData);
+          }
+          syncToSupabase(localData);
+          
+          if (window.ProgressSyncCallback) {
+            window.ProgressSyncCallback();
+          }
+        }
+      });
+  }
+
+  function mergeProgress(local, remote) {
+    var merged = getDefaults();
+    
+    merged.studentName = remote.studentName || local.studentName || '';
+    merged.streak = Math.max(local.streak || 0, remote.streak || 0);
+    merged.totalPoints = Math.max(local.totalPoints || 0, remote.totalPoints || 0);
+    merged.soundEnabled = remote.soundEnabled !== undefined ? remote.soundEnabled : local.soundEnabled;
+    merged.lastStreakDate = remote.lastStreakDate || local.lastStreakDate || '';
+    merged.lastVisit = new Date(local.lastVisit || 0) > new Date(remote.lastVisit || 0) ? local.lastVisit : remote.lastVisit;
+    
+    merged.lessons = Object.assign({}, local.lessons || {}, remote.lessons || {});
+    merged.quizzes = Object.assign({}, local.quizzes || {}, remote.quizzes || {});
+    
+    var badges = (local.badges || []).concat(remote.badges || []);
+    merged.badges = Array.from(new Set(badges));
+    
+    var worksheets = (local.worksheetsPrinted || []).concat(remote.worksheetsPrinted || []);
+    merged.worksheetsPrinted = Array.from(new Set(worksheets));
+    
+    return merged;
+  }
+
+  function handleAuthStateChange(user) {
+    if (user) {
+      console.log('Storage: User logged in, fetching remote progress for', user.email);
+      fetchFromSupabase(user.id, user);
+    } else {
+      console.log('Storage: No user logged in. Using local storage.');
+    }
+  }
+
+  // Subscribe to auth state changes when script finishes loading
+  setTimeout(function () {
+    if (window.AuthService) {
+      window.AuthService.subscribe(handleAuthStateChange);
+    }
+  }, 100);
 
   function getDefaults() {
     return {

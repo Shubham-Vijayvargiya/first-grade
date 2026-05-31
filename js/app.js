@@ -63,11 +63,94 @@
       AudioService.init();
       document.removeEventListener('click', initAudio);
     }, { once: true });
+
+    // Listen for auth state changes
+    if (window.AuthService) {
+      window.AuthService.subscribe(function (user) {
+        updateAuthUI(user);
+        if (user) {
+          // If welcome modal is open, auto-close it if name exists
+          var modal = document.getElementById('welcome-modal');
+          var name = Storage.getStudentName();
+          if (name) {
+            if (modal && !modal.classList.contains('hidden')) {
+              modal.classList.add('hidden');
+              handleRoute();
+            }
+          } else if (user.name) {
+            Storage.setStudentName(user.name);
+            if (modal && !modal.classList.contains('hidden')) {
+              modal.classList.add('hidden');
+              handleRoute();
+            }
+          }
+        }
+      });
+    }
+
+    // ProgressSyncCallback when remote database updates
+    window.ProgressSyncCallback = function () {
+      Progress.updateHeaderStats();
+      handleRoute();
+    };
+
+    // Google Sign-In Buttons
+    var headerLoginBtn = document.getElementById('header-login-btn');
+    if (headerLoginBtn) {
+      headerLoginBtn.addEventListener('click', function () {
+        if (window.AuthService) window.AuthService.loginWithGoogle();
+      });
+    }
+
+    var googleSigninBtn = document.getElementById('google-signin-btn');
+    if (googleSigninBtn) {
+      googleSigninBtn.addEventListener('click', function () {
+        if (window.AuthService) window.AuthService.loginWithGoogle();
+      });
+    }
   }
 
   function updateSoundButton(enabled) {
     var btn = document.getElementById('sound-toggle');
     if (btn) btn.textContent = enabled ? '🔊' : '🔇';
+  }
+
+  function updateAuthUI(user) {
+    var container = document.getElementById('auth-status-container');
+    if (!container) return;
+
+    if (user) {
+      var html = '<div class="auth-user-profile">';
+      if (user.avatar) {
+        html += '<img src="' + escapeHtml(user.avatar) + '" alt="' + escapeHtml(user.name) + '" class="auth-user-avatar">';
+      } else {
+        html += '<span class="auth-user-avatar" style="display:flex;align-items:center;justify-content:center;font-size:1.2rem;background:#E9ECEF">👤</span>';
+      }
+      html += '<span class="auth-user-name" title="' + escapeHtml(user.email) + '">' + escapeHtml(user.name) + '</span>';
+      html += '<button id="header-logout-btn" class="btn btn-outline btn-sm">Sign Out</button>';
+      html += '</div>';
+      container.innerHTML = html;
+
+      var logoutBtn = document.getElementById('header-logout-btn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', function () {
+          if (window.AuthService) {
+            window.AuthService.signOut().then(function () {
+              Storage.resetAll();
+              window.location.reload();
+            });
+          }
+        });
+      }
+    } else {
+      container.innerHTML = '<button id="header-login-btn" class="btn btn-outline btn-sm">🔑 Sign In</button>';
+      var loginBtn = document.getElementById('header-login-btn');
+      if (loginBtn) {
+        loginBtn.addEventListener('click', function () {
+          if (window.AuthService) window.AuthService.loginWithGoogle();
+        });
+      }
+    }
   }
 
   // ── Welcome Modal ────────────────────────────────────────────

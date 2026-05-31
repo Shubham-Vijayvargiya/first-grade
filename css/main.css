@@ -1001,3 +1001,116 @@ h6 { font-size: var(--font-size-md); }
     padding: 6px;
   }
 }
+
+/* ── Google Authentication & Sync Styles ─────────────────────── */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  margin: var(--space-md) 0;
+  width: 100%;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 2px dashed #CED4DA;
+}
+
+.auth-divider:not(:empty)::before {
+  margin-right: .5em;
+}
+
+.auth-divider:not(:empty)::after {
+  margin-left: .5em;
+}
+
+.btn-google {
+  background-color: #FFFFFF !important;
+  color: #374151 !important;
+  border: 2px solid #212529 !important;
+  box-shadow: 2px 2px 0px #212529 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  width: 100%;
+  padding: 10px 16px;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.btn-google:hover:not(:disabled) {
+  transform: translate(-2px, -2px);
+  box-shadow: 4px 4px 0px #212529 !important;
+}
+
+.btn-google:active:not(:disabled) {
+  transform: translate(0px, 0px);
+  box-shadow: 2px 2px 0px #212529 !important;
+}
+
+.google-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* Header Auth Container */
+.auth-status-container {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+}
+
+.auth-user-profile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.auth-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-round);
+  border: 2px solid #212529;
+  object-fit: cover;
+  box-shadow: 1px 1px 0px #212529;
+}
+
+.auth-user-name {
+  font-size: var(--font-size-sm);
+  font-weight: 800;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--text-primary);
+  border: 2px solid #212529;
+  box-shadow: 1px 1px 0px #212529;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: var(--font-size-xs);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.btn-outline:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 2px 2px 0px #212529;
+}
+
+.btn-outline:active {
+  transform: translate(0px, 0px);
+  box-shadow: 1px 1px 0px #212529;
+}
+
