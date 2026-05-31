@@ -67,13 +67,16 @@
     // Listen for auth state changes
     if (window.AuthService) {
       var isFirstAuth = true;
+      var wasAuthenticated = false;
       window.AuthService.subscribe(function (user) {
         updateAuthUI(user);
         if (user) {
+          if (!wasAuthenticated) {
+            window.ShowProfileSelectorPending = true;
+          }
           var modal = document.getElementById('welcome-modal');
           if (modal && !modal.classList.contains('hidden')) {
             modal.classList.add('hidden');
-            showProfileSelectorModal();
           } else if (isFirstAuth) {
             var profiles = Storage.getProfiles();
             if (Object.keys(profiles).length > 1) {
@@ -81,6 +84,9 @@
             }
           }
           isFirstAuth = false;
+          wasAuthenticated = true;
+        } else {
+          wasAuthenticated = false;
         }
       });
     }
@@ -88,7 +94,28 @@
     // ProgressSyncCallback when remote database updates
     window.ProgressSyncCallback = function () {
       Progress.updateHeaderStats();
-      handleRoute();
+      
+      // Update Auth UI to show correct child profile name in header
+      if (window.AuthService && window.AuthService.isAuthenticated()) {
+        var user = window.AuthService.getCurrentUser();
+        updateAuthUI(user);
+      }
+
+      if (window.ShowProfileSelectorPending) {
+        window.ShowProfileSelectorPending = false;
+        var profiles = Storage.getProfiles();
+        var keys = Object.keys(profiles);
+        if (keys.length > 1) {
+          showProfileSelectorModal();
+        } else {
+          if (keys[0]) {
+            Storage.switchProfile(keys[0]);
+          }
+          handleRoute();
+        }
+      } else {
+        handleRoute();
+      }
     };
 
     // Google Sign-In Buttons
